@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eye, Mail, Phone, Calendar, FileText, Image, Video, ArrowLeft } from 'lucide-react';
+import { Eye, Mail, Phone, Calendar, FileText, Image, Video, ArrowLeft, MapPin, Package, Copy, CheckCircle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 interface Submission {
@@ -12,6 +12,12 @@ interface Submission {
   description: string;
   status: string;
   created_at: string;
+  // New address fields
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
   submission_files?: SubmissionFile[];
 }
 
@@ -28,6 +34,7 @@ export default function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   // Fetch submissions from Supabase
   useEffect(() => {
@@ -123,6 +130,41 @@ export default function AdminDashboard() {
     }
   };
 
+  const formatShippingAddress = (submission: Submission) => {
+    if (!submission.address) return 'No address provided';
+    
+    const parts = [
+      submission.address,
+      submission.city,
+      submission.state,
+      submission.zip_code,
+      submission.country
+    ].filter(Boolean);
+    
+    return parts.join(', ');
+  };
+
+  const copyAddressToClipboard = async (submission: Submission) => {
+    const addressText = [
+      submission.name,
+      submission.address,
+      `${submission.city}, ${submission.state} ${submission.zip_code}`,
+      submission.country
+    ].filter(Boolean).join('\n');
+
+    try {
+      await navigator.clipboard.writeText(addressText);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
+
+  const hasCompleteAddress = (submission: Submission) => {
+    return submission.address && submission.city && submission.state && submission.zip_code;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -154,7 +196,7 @@ export default function AdminDashboard() {
   if (selectedSubmission) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between">
@@ -172,7 +214,7 @@ export default function AdminDashboard() {
                 <select
                   value={selectedSubmission.status}
                   onChange={(e) => updateSubmissionStatus(selectedSubmission.id, e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-1 text-sm"
+                  className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="pending">Pending</option>
                   <option value="reviewed">Reviewed</option>
@@ -184,47 +226,110 @@ export default function AdminDashboard() {
           </div>
 
           {/* Submission Details */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Submission Details</h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-                <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Contact Information */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Mail className="w-5 h-5 mr-2 text-blue-600" />
+                Contact Information
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <span className="font-medium text-gray-700 w-20">Name:</span>
+                  <span className="text-gray-900">{selectedSubmission.name}</span>
+                </div>
+                <div className="flex items-center">
+                  <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                  <span className="font-medium text-gray-700 w-16">Email:</span>
+                  <a href={`mailto:${selectedSubmission.email}`} className="text-blue-600 hover:text-blue-800">
+                    {selectedSubmission.email}
+                  </a>
+                </div>
+                {selectedSubmission.phone && (
                   <div className="flex items-center">
-                    <span className="font-medium text-gray-700 w-20">Name:</span>
-                    <span className="text-gray-900">{selectedSubmission.name}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="font-medium text-gray-700 w-16">Email:</span>
-                    <a href={`mailto:${selectedSubmission.email}`} className="text-blue-600 hover:text-blue-800">
-                      {selectedSubmission.email}
+                    <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                    <span className="font-medium text-gray-700 w-16">Phone:</span>
+                    <a href={`tel:${selectedSubmission.phone}`} className="text-blue-600 hover:text-blue-800">
+                      {selectedSubmission.phone}
                     </a>
                   </div>
-                  {selectedSubmission.phone && (
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="font-medium text-gray-700 w-16">Phone:</span>
-                      <a href={`tel:${selectedSubmission.phone}`} className="text-blue-600 hover:text-blue-800">
-                        {selectedSubmission.phone}
-                      </a>
+                )}
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                  <span className="font-medium text-gray-700 w-16">Date:</span>
+                  <span className="text-gray-900">{formatDate(selectedSubmission.created_at)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping Address */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <MapPin className="w-5 h-5 mr-2 text-green-600" />
+                Shipping Address
+                {hasCompleteAddress(selectedSubmission) && (
+                  <button
+                    onClick={() => copyAddressToClipboard(selectedSubmission)}
+                    className="ml-auto flex items-center text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg transition-colors"
+                  >
+                    {copiedAddress ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-1" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                )}
+              </h3>
+              
+              {hasCompleteAddress(selectedSubmission) ? (
+                <div className="space-y-2">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="space-y-1">
+                      <div className="font-medium text-gray-900">{selectedSubmission.name}</div>
+                      <div className="text-gray-700">{selectedSubmission.address}</div>
+                      <div className="text-gray-700">
+                        {selectedSubmission.city}, {selectedSubmission.state} {selectedSubmission.zip_code}
+                      </div>
+                      <div className="text-gray-700">{selectedSubmission.country}</div>
                     </div>
-                  )}
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="font-medium text-gray-700 w-16">Date:</span>
-                    <span className="text-gray-900">{formatDate(selectedSubmission.created_at)}</span>
+                  </div>
+                  
+                  {/* Shipping Label Action */}
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                    <span className="text-sm text-gray-600">Ready for shipping label</span>
+                    <button className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors">
+                      <Package className="w-4 h-4 mr-1" />
+                      Create Label
+                    </button>
                   </div>
                 </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Collection Description</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-700 whitespace-pre-wrap">{selectedSubmission.description}</p>
+              ) : (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-700 text-sm">
+                    <strong>Incomplete Address:</strong> Missing address information needed for shipping labels.
+                  </p>
+                  <div className="mt-2 text-sm text-red-600">
+                    {!selectedSubmission.address && <div>• Street address missing</div>}
+                    {!selectedSubmission.city && <div>• City missing</div>}
+                    {!selectedSubmission.state && <div>• State missing</div>}
+                    {!selectedSubmission.zip_code && <div>• ZIP code missing</div>}
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
+
+          {/* Collection Description */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Collection Description</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-700 whitespace-pre-wrap">{selectedSubmission.description}</p>
             </div>
           </div>
 
@@ -281,6 +386,23 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {['pending', 'reviewed', 'contacted', 'completed'].map(status => {
+            const count = submissions.filter(sub => sub.status === status).length;
+            return (
+              <div key={status} className="bg-white rounded-lg shadow-sm p-4">
+                <div className="text-center">
+                  <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(status)} mb-2`}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{count}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Submissions List */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
@@ -301,6 +423,9 @@ export default function AdminDashboard() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Address
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Files
@@ -332,6 +457,23 @@ export default function AdminDashboard() {
                         {submission.phone && (
                           <div className="text-sm text-gray-500">{submission.phone}</div>
                         )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs">
+                          {hasCompleteAddress(submission) ? (
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 text-green-600 mr-1 flex-shrink-0" />
+                              <span className="truncate">
+                                {submission.city}, {submission.state}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-red-600">
+                              <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                              <span className="text-sm">Incomplete</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
