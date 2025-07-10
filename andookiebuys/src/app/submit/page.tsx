@@ -51,6 +51,34 @@ export default function SubmitPage() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const sendEmailNotifications = async (submissionId: string) => {
+    try {
+      // Send notification to admin
+      const adminEmailResponse = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+  
+      // Send confirmation to user
+      const confirmationResponse = await fetch('/api/send-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+  
+      if (!adminEmailResponse.ok || !confirmationResponse.ok) {
+        console.error('Failed to send email notifications');
+      }
+    } catch (error) {
+      console.error('Error sending email notifications:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -78,8 +106,11 @@ export default function SubmitPage() {
 
       if (response.ok) {
         alert(`Success! Your submission has been received. Reference ID: ${result.submission.id}`);
+
+        const submissionId = result.submission.id; // Replace with actual ID
+        // Send email notifications (don't await - let them run in background)
+        sendEmailNotifications(submissionId);
         
-        // Reset form
         setFormData({ name: '', email: '', phone: '', description: '' });
         setFiles([]);
       } else {
