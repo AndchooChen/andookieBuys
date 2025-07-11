@@ -137,16 +137,76 @@ export default function SubmissionForm() {
     });
   };
 
+  const sendEmailNotifications = async (submissionId: string) => {
+    try {
+      // Send notification to admin
+      const adminEmailResponse = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+  
+      // Send confirmation to user
+      const confirmationResponse = await fetch('/api/send-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+  
+      if (!adminEmailResponse.ok || !confirmationResponse.ok) {
+        console.error('Failed to send email notifications');
+      }
+    } catch (error) {
+      console.error('Error sending email notifications:', error);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create FormData object to send form data and files
+      const formDataToSend = new FormData();
+      
+      // Append all form fields
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('address', formData.address);
+      formDataToSend.append('city', formData.city);
+      formDataToSend.append('state', formData.state);
+      formDataToSend.append('zipCode', formData.zipCode);
+      formDataToSend.append('country', formData.country);
+      formDataToSend.append('priceRange', formData.priceRange);
+      
+      // Append files
+      files.forEach(file => {
+        formDataToSend.append('files', file);
+      });
+      
+      // Make actual API call to your endpoint
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        body: formDataToSend,
+      });
+      
+      const result = await response.json();
+      
+      const submissionId = result.submission.id; 
+      sendEmailNotifications(submissionId);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit form');
+      }
       
       setSubmitSuccess(true);
       
@@ -164,9 +224,10 @@ export default function SubmissionForm() {
         priceRange: ''
       });
       setFiles([]);
-      
     } catch (error) {
       console.error('Submission error:', error);
+      // You might want to show an error message to the user
+      // setErrorMessage(error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -498,7 +559,7 @@ export default function SubmissionForm() {
                   Upload Photos/Videos *
                 </label>
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 backdrop-blur-sm ${
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 backdrop-blur-sm cursor-pointer ${
                     dragActive
                       ? 'border-purple-500 bg-purple-500/10'
                       : errors.files
@@ -509,24 +570,26 @@ export default function SubmissionForm() {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-input').click()}
                 >
                   <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-300 mb-2">
                     Drag and drop your files here, or{' '}
-                    <label className="text-purple-400 hover:text-purple-300 cursor-pointer">
+                    <span className="text-purple-400 hover:text-purple-300">
                       browse
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,video/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
+                    </span>
                   </p>
                   <p className="text-sm text-gray-400">
                     Support for images and videos up to 100MB each
                   </p>
+                  <input
+                    id="file-input"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                 </div>
                 {errors.files && <p className="text-red-400 text-sm mt-1">{errors.files}</p>}
               </div>
@@ -568,9 +631,16 @@ export default function SubmissionForm() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-purple-400 disabled:to-blue-400 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-purple-400 disabled:to-blue-400 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black flex items-center justify-center"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Collection'}
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Collection'
+                )}
               </button>
             </div>
           </div>
