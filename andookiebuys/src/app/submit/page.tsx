@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload, X, MapPin, User, Mail, Phone, FileText, Package, ArrowLeft } from 'lucide-react';
+import { Upload, X, MapPin, User, Mail, Phone, FileText, Package, ArrowLeft, DollarSign } from 'lucide-react';
 
 interface FormData {
   name: string;
@@ -14,6 +14,8 @@ interface FormData {
   state: string;
   zipCode: string;
   country: string;
+  // Price expectation
+  priceRange: string;
 }
 
 interface FileWithPreview extends File {
@@ -30,7 +32,8 @@ export default function SubmissionForm() {
     city: '',
     state: '',
     zipCode: '',
-    country: 'United States'
+    country: 'United States',
+    priceRange: ''
   });
 
   const [files, setFiles] = useState<FileWithPreview[]>([]);
@@ -157,7 +160,8 @@ export default function SubmissionForm() {
         city: '',
         state: '',
         zipCode: '',
-        country: 'United States'
+        country: 'United States',
+        priceRange: ''
       });
       setFiles([]);
       
@@ -177,6 +181,20 @@ export default function SubmissionForm() {
     'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
     'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
     'Wisconsin', 'Wyoming'
+  ];
+
+  const PRICE_RANGES = [
+    { value: 'under-50', label: 'Under $50' },
+    { value: '50-100', label: '$50 - $100' },
+    { value: '100-200', label: '$100 - $200' },
+    { value: '200-300', label: '$200 - $300' },
+    { value: '300-400', label: '$300 - $400' },
+    { value: '400-500', label: '$400 - $500' },
+    { value: '500-700', label: '$500 - $700' },
+    { value: '700-1000', label: '$700 - $1000' },
+    { value: '1000-2000', label: '$1,000 - $2,000' },
+    { value: 'over-20000', label: 'Over $2,000' },
+    { value: 'not-sure', label: 'Not sure / Need help estimating' }
   ];
 
   if (submitSuccess) {
@@ -246,7 +264,10 @@ export default function SubmissionForm() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             AndookieCards
           </h1>
-          <button className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+          >
             <ArrowLeft className="w-5 h-5" />
             Back to Home
           </button>
@@ -421,22 +442,54 @@ export default function SubmissionForm() {
                 </div>
               </div>
 
-              {/* Collection Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Collection Description *
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className={`w-full px-3 py-2 bg-white/10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-400 backdrop-blur-sm ${
-                    errors.description ? 'border-red-500' : 'border-white/20'
-                  }`}
-                  placeholder="Describe your Pokémon card collection (sets, condition, notable cards, etc.)"
-                />
-                {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
+              {/* Collection Information Section */}
+              <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-green-400" />
+                  Collection Information
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Collection Description *
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      rows={4}
+                      className={`w-full px-3 py-2 bg-white/10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-400 backdrop-blur-sm ${
+                        errors.description ? 'border-red-500' : 'border-white/20'
+                      }`}
+                      placeholder="Describe your Pokémon card collection (sets, condition, notable cards, etc.)"
+                    />
+                    {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <DollarSign className="w-4 h-4 inline mr-1 text-green-400" />
+                      Price Expectation (Optional)
+                    </label>
+                    <select
+                      name="priceRange"
+                      value={formData.priceRange}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white backdrop-blur-sm"
+                    >
+                      <option value="" className="bg-gray-800 text-white">Select a price range (optional)</option>
+                      {PRICE_RANGES.map(range => (
+                        <option key={range.value} value={range.value} className="bg-gray-800 text-white">
+                          {range.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">
+                      This helps us provide more targeted feedback and ensures we're aligned on expectations.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* File Upload */}

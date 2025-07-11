@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eye, Mail, Phone, Calendar, FileText, Image, Video, ArrowLeft, MapPin, Package, Copy, CheckCircle, TrendingUp, Shield, Zap } from 'lucide-react';
+import { Eye, Mail, Phone, Calendar, FileText, Image, Video, ArrowLeft, MapPin, Package, Copy, CheckCircle, TrendingUp, Shield, Zap, DollarSign } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 interface Submission {
@@ -12,7 +12,8 @@ interface Submission {
   description: string;
   status: string;
   created_at: string;
-  // New address fields
+  price_range?: string;
+  // Address fields
   address?: string;
   city?: string;
   state?: string;
@@ -29,6 +30,20 @@ interface SubmissionFile {
   file_url: string;
 }
 
+const PRICE_RANGES = [
+  { value: 'under-50', label: 'Under $50' },
+  { value: '50-100', label: '$50 - $100' },
+  { value: '100-200', label: '$100 - $200' },
+  { value: '200-300', label: '$200 - $300' },
+  { value: '300-400', label: '$300 - $400' },
+  { value: '400-500', label: '$400 - $500' },
+  { value: '500-700', label: '$500 - $700' },
+  { value: '700-1000', label: '$700 - $1000' },
+  { value: '1000-2000', label: '$1,000 - $2,000' },
+  { value: 'over-2000', label: 'Over $2,000' },
+  { value: 'not-sure', label: 'Not sure / Need help estimating' }
+];
+
 export default function AdminDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -44,7 +59,7 @@ export default function AdminDashboard() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch submissions with their files
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('submissions')
@@ -105,6 +120,37 @@ export default function AdminDashboard() {
       case 'contacted': return 'bg-green-500/20 text-green-300 border-green-500/30';
       case 'completed': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
       default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    }
+  };
+
+  const getPriceRangeLabel = (value: string) => {
+    const range = PRICE_RANGES.find(r => r.value === value);
+    return range ? range.label : value;
+  };
+
+  const getPriceRangeColor = (value: string) => {
+    if (!value) return 'text-gray-400';
+    
+    switch (value) {
+      case 'under-50':
+      case '50-100':
+        return 'text-green-400';
+      case '100-200':
+      case '200-300':
+        return 'text-blue-400';
+      case '300-400':
+      case '400-500':
+        return 'text-purple-400';
+      case '500-700':
+      case '700-1000':
+        return 'text-orange-400';
+      case '1000-2000':
+      case 'over-2000':
+        return 'text-red-400';
+      case 'not-sure':
+        return 'text-yellow-400';
+      default:
+        return 'text-gray-400';
     }
   };
 
@@ -175,7 +221,7 @@ export default function AdminDashboard() {
         {/* Background gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20"></div>
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-purple-500/5 to-transparent"></div>
-        
+
         {/* Animated background dots */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
@@ -275,7 +321,7 @@ export default function AdminDashboard() {
                     </button>
                   )}
                 </h3>
-                
+
                 {hasCompleteAddress(selectedSubmission) ? (
                   <div className="space-y-2">
                     <div className="bg-white/5 p-4 rounded-xl border border-white/10">
@@ -288,7 +334,7 @@ export default function AdminDashboard() {
                         <div className="text-gray-300">{selectedSubmission.country}</div>
                       </div>
                     </div>
-                    
+
                     {/* Shipping Label Action */}
                     <div className="flex items-center justify-between pt-3 border-t border-white/10">
                       <span className="text-sm text-gray-300">Ready for shipping label</span>
@@ -314,11 +360,34 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Collection Description */}
-            <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl border border-white/10 p-6 mb-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Collection Description</h3>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <p className="text-gray-300 whitespace-pre-wrap">{selectedSubmission.description}</p>
+            {/* Price Range & Collection Description */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Price Range */}
+              <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                  <DollarSign className="w-5 h-5 mr-2 text-green-400" />
+                  Estimated Value
+                </h3>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                  {selectedSubmission.price_range ? (
+                    <div className="flex items-center">
+                      <DollarSign className="w-4 h-4 mr-2 text-green-400" />
+                      <span className={`font-medium ${getPriceRangeColor(selectedSubmission.price_range)}`}>
+                        {getPriceRangeLabel(selectedSubmission.price_range)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-400 italic">No price range specified</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Collection Description */}
+              <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Collection Description</h3>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10 max-h-40 overflow-y-auto">
+                  <p className="text-gray-300 whitespace-pre-wrap">{selectedSubmission.description}</p>
+                </div>
               </div>
             </div>
 
@@ -364,7 +433,7 @@ export default function AdminDashboard() {
       {/* Background gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20"></div>
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-purple-500/5 to-transparent"></div>
-      
+
       {/* Animated background dots */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
@@ -421,7 +490,7 @@ export default function AdminDashboard() {
             <div className="px-6 py-4 border-b border-white/10">
               <h2 className="text-xl font-semibold text-white">Recent Submissions</h2>
             </div>
-            
+
             {submissions.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-gray-400">No submissions yet.</p>
@@ -436,6 +505,9 @@ export default function AdminDashboard() {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Contact
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Price Range
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Address
@@ -471,6 +543,23 @@ export default function AdminDashboard() {
                             <div className="text-sm text-gray-400">{submission.phone}</div>
                           )}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            {submission.price_range ? (
+                              <div className="flex items-center">
+                                <DollarSign className="w-4 h-4 mr-1 text-green-400 flex-shrink-0" />
+                                <span className={`${getPriceRangeColor(submission.price_range)} truncate max-w-24`}>
+                                  {getPriceRangeLabel(submission.price_range)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center text-gray-400">
+                                <DollarSign className="w-4 h-4 mr-1 flex-shrink-0" />
+                                <span className="text-sm">Not specified</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-white max-w-xs">
                             {hasCompleteAddress(submission) ? (
@@ -494,21 +583,35 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(submission.status)}`}>
+                          <span className={`px-3 py-1 rounded-xl text-xs font-medium border ${getStatusColor(submission.status)}`}>
                             {submission.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                          {formatDate(submission.created_at)}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white">
+                            {formatDate(submission.created_at)}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => setSelectedSubmission(submission)}
-                            className="text-blue-400 hover:text-blue-300 flex items-center transition-colors group"
-                          >
-                            <Eye className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
-                            View
-                          </button>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <select
+                              value={submission.status}
+                              onChange={(e) => updateSubmissionStatus(submission.id, e.target.value)}
+                              className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                            >
+                              <option value="pending" className="bg-gray-900">Pending</option>
+                              <option value="reviewed" className="bg-gray-900">Reviewed</option>
+                              <option value="contacted" className="bg-gray-900">Contacted</option>
+                              <option value="completed" className="bg-gray-900">Completed</option>
+                            </select>
+                            <button
+                              onClick={() => setSelectedSubmission(submission)}
+                              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-3 py-1 rounded-lg text-xs font-medium transition-all duration-300 transform hover:scale-105 flex items-center"
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
