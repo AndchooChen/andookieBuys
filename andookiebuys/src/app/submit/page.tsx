@@ -570,7 +570,7 @@ export default function SubmissionForm() {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  onClick={() => document.getElementById('file-input').click()}
+                  onClick={() => document.getElementById('file-input')?.click()}
                 >
                   <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-300 mb-2">
