@@ -137,34 +137,6 @@ export default function SubmissionForm() {
     });
   };
 
-  const sendEmailNotifications = async (submissionId: string) => {
-    try {
-      // Send notification to admin
-      const adminEmailResponse = await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ submissionId }),
-      });
-  
-      // Send confirmation to user
-      const confirmationResponse = await fetch('/api/send-confirmation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ submissionId }),
-      });
-  
-      if (!adminEmailResponse.ok || !confirmationResponse.ok) {
-        console.error('Failed to send email notifications');
-      }
-    } catch (error) {
-      console.error('Error sending email notifications:', error);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
@@ -201,11 +173,20 @@ export default function SubmissionForm() {
       
       const result = await response.json();
       
-      const submissionId = result.submission.id; 
-      sendEmailNotifications(submissionId);
-
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit form');
+      }
+      
+      const submissionId = result.submission.id;
+      
+      // Send email notifications with proper error handling
+      try {
+        await sendEmailNotifications(submissionId);
+        console.log('Email notifications sent successfully');
+      } catch (emailError) {
+        console.error('Email notification error:', emailError);
+        // Don't throw here - submission was successful even if emails failed
+        // You might want to show a warning to the user about email issues
       }
       
       setSubmitSuccess(true);
@@ -224,12 +205,51 @@ export default function SubmissionForm() {
         priceRange: ''
       });
       setFiles([]);
+      
     } catch (error) {
       console.error('Submission error:', error);
       // You might want to show an error message to the user
       // setErrorMessage(error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  // Make sure your sendEmailNotifications function looks like this:
+  const sendEmailNotifications = async (submissionId: string) => {
+    try {
+      // Send confirmation email to user
+      const confirmationResponse = await fetch('/api/emails/confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+      
+      if (!confirmationResponse.ok) {
+        const error = await confirmationResponse.json();
+        throw new Error(`Confirmation email failed: ${error.error}`);
+      }
+      
+      // Send notification email to admin
+      const notificationResponse = await fetch('/api/emails/notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+      
+      if (!notificationResponse.ok) {
+        const error = await notificationResponse.json();
+        throw new Error(`Notification email failed: ${error.error}`);
+      }
+      
+      console.log('Both emails sent successfully');
+    } catch (error) {
+      console.error('Email sending error:', error);
+      throw error; // Re-throw to let handleSubmit handle it
     }
   };
 
