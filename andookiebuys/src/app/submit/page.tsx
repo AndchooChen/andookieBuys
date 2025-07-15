@@ -172,13 +172,13 @@ export default function SubmissionForm() {
       });
       
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit form');
       }
       
-      const submissionId = result.submission.id;
-      
+      const submissionId = result.submissions.id || result.id;
+
       // Send email notifications with proper error handling
       try {
         await sendEmailNotifications(submissionId);
@@ -215,11 +215,10 @@ export default function SubmissionForm() {
     }
   };
   
-  // Make sure your sendEmailNotifications function looks like this:
   const sendEmailNotifications = async (submissionId: string) => {
     try {
       // Send confirmation email to user
-      const confirmationResponse = await fetch('/api/emails/confirmation', {
+      const confirmationResponse = await fetch('/api/send-confirmation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +232,7 @@ export default function SubmissionForm() {
       }
       
       // Send notification email to admin
-      const notificationResponse = await fetch('/api/emails/notification', {
+      const notificationResponse = await fetch('/api/send-notification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
