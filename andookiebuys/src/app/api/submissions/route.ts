@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload files to Supabase Storage
+    // Upload files to Supabase Storage - FIXED BUCKET NAME
     const uploadedFiles = [];
     for (const file of files) {
       if (file.size > 0) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         const fileBuffer = await file.arrayBuffer();
         
         const { error: uploadError } = await supabase.storage
-          .from('submissions')
+          .from('submission-files') // CHANGED FROM 'submissions' TO 'submission-files'
           .upload(fileName, fileBuffer, {
             contentType: file.type,
           });
@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Get public URL
+        // Get public URL - FIXED BUCKET NAME
         const { data: { publicUrl } } = supabase.storage
-          .from('submissions')
+          .from('submission-files') // CHANGED FROM 'submissions' TO 'submission-files'
           .getPublicUrl(fileName);
 
         // Save file info to database

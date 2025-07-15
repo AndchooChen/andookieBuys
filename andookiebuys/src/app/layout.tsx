@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AndookieTCG",
+  title: "AndookieCards",
   description: "Turn your Pokemon Cards into Cash!",
 };
 
